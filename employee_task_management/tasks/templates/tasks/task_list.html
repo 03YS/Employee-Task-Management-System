@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Task Management</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .box {
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .form-container form {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-container form label {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-container form input, .form-container form select, .form-container form button {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            width: 100%;
+            max-width: 300px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .btn-delete {
+            color: white;
+            background-color: red;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .btn-delete:hover {
+            background-color: darkred;
+        }
+    </style>
+</head>
+<body>
+    <h1>Employee Task Management</h1>
+
+    <div class="box">
+        <div class="task-container">
+            <h2>Tasks</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Task Name</th>
+                        <th>Employee Name</th>
+                        <th>Status</th>
+                        <th>Due Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="task-table-body">
+                    {% for task in tasks %}
+                    <tr data-id="{{ task.id }}">
+                        <td>{{ task.name }}</td>
+                        <td>{{ task.employee.name }}</td>
+                        <td>{{ task.get_status_display }}</td>
+                        <td>{{ task.due_date }}</td>
+                        <td>
+                            <button class="btn-delete" data-id="{{ task.id }}">Delete</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="box">
+        <div class="form-container">
+            <h2>Task List</h2>
+            <form id="task-form">
+                {% csrf_token %}
+                <label for="task_name">Task Name</label>
+                <input type="text" id="task_name" name="task_name" placeholder="Task Name" required>
+
+                <label for="employee_name">Employee Name</label>
+                <input type="text" id="employee_name" name="employee_name" placeholder="Employee Name" required>
+
+                <label for="status">Status</label>
+                <select id="status" name="status" required>
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                </select>
+
+                <label for="due_date">Due Date</label>
+                <input type="date" id="due_date" name="due_date" required>
+
+                <button type="submit">Submit</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            $('#task-form').submit(function(event) {
+                event.preventDefault();
+                var formData = $(this).serialize();
+                $.ajax({
+                    url: '{% url "add_task" %}',
+                    method: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        var newRow = `<tr data-id="${response.id}">
+                                        <td>${response.name}</td>
+                                        <td>${response.employee}</td>
+                                        <td>${response.status}</td>
+                                        <td>${response.due_date}</td>
+                                        <td><button class="btn-delete" data-id="${response.id}">Delete</button></td>
+                                      </tr>`;
+                        $('#task-table-body').append(newRow);
+                        $('#task-form')[0].reset();
+                    },
+                    error: function(xhr, errmsg, err) {
+                        alert("An error occurred: " + errmsg);
+                    }
+                });
+            });
+
+            $(document).on('click', '.btn-delete', function() {
+                var taskId = $(this).data('id');
+                $.ajax({
+                    url: '/delete_task/' + taskId + '/',
+                    method: 'POST',
+                    data: {
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function(response) {
+                        $('tr[data-id="' + taskId + '"]').remove();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
